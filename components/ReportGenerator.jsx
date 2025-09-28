@@ -24,7 +24,7 @@ const ReportGenerator = () => {
   const fetchAvailableReports = async () => {
     try {
       setIsLoading(true)
-      const response = await fetch('http://localhost:5003/api/reports')
+      const response = await fetch('https://allure-telephony.onrender.com/api/reports')
       
       if (!response.ok) {
         throw new Error('Failed to fetch reports')
@@ -46,7 +46,7 @@ const ReportGenerator = () => {
     try {
       console.log(`Starting download for ${runId}...`)
       
-      const response = await fetch(`http://localhost:5003/api/download-report/${encodeURIComponent(runId)}`)
+      const response = await fetch(`https://allure-telephony.onrender.com/api/download-report/${encodeURIComponent(runId)}`)
       
       if (!response.ok) {
         const errorText = await response.text()

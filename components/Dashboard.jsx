@@ -58,7 +58,7 @@ const Dashboard = () => {
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           <strong>Error:</strong> {error}
           <br />
-          <small>Make sure the server is running on http://localhost:5003</small>
+          <small>Make sure the server is running on https://allure-telephony.onrender.com</small>
         </div>
       </div>
     );

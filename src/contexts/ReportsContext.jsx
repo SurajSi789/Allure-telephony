@@ -44,7 +44,7 @@ export const ReportsProvider = ({ children }) => {
     setReportsCache(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const response = await fetch("http://localhost:5003/api/reports");
+      const response = await fetch("https://allure-telephony.onrender.com/api/reports");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

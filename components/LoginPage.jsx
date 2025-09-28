@@ -13,7 +13,7 @@ const LoginPage = () => {
     
         try {
           console.log('Attempting login with:', email, password)
-          const res = await fetch("http://localhost:5003/login", {
+          const res = await fetch("https://allure-telephony.onrender.com/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, password }),
