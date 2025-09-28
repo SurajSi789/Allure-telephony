@@ -14,6 +14,7 @@ const AllureViewer = () => {
   const { runId } = useParams();
   const navigate = useNavigate();
   const { reports, getReports, getCacheStatus } = useReports();
+  const [showPopup, setShowPopup] = useState(false);
   
   // Debug: Log the runId to see what we're receiving
   console.log('AllureViewer received runId:', runId);
@@ -122,6 +123,8 @@ const AllureViewer = () => {
   // Handle download logs using extracted utility
   const handleDownloadLogs = async (testResult) => {
     try {
+      setShowPopup(true);
+      setTimeout(() => setShowPopup(false), 2000);
       const s3Client = await initializeS3Client(s3Config);
       await downloadAllTestLogs(s3Client, s3Config, testResult);
     } catch (error) {
@@ -469,6 +472,14 @@ const AllureViewer = () => {
           </div>
         )}
       </div>
+
+      {showPopup && (
+        <div className="fixed inset-0 flex items-center justify-center">
+          <div className="bg-white px-6 py-10 rounded-lg shadow-lg">
+            <p className="text-lg font-semibold">Download started 🚀</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
