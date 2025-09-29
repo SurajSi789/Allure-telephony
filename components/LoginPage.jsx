@@ -12,7 +12,6 @@ const LoginPage = () => {
         e.preventDefault();
     
         try {
-          console.log('Attempting login with:', email, password)
           const res = await fetch("https://allure-telephony.onrender.com/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
