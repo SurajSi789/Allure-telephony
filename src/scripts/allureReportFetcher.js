@@ -5,23 +5,18 @@ import dotenv from "dotenv";
 // Load environment variables for Node.js
 dotenv.config();
 
-// Get environment variables with fallbacks
-const AWS_REGION = process.env.VITE_AWS_REGION || process.env.AWS_REGION || 'eu-north-1';
 const AWS_ACCESS_KEY = process.env.VITE_AWS_ACCESS_KEY || process.env.AWS_ACCESS_KEY;
 const AWS_SECRET_KEY = process.env.VITE_AWS_SECRET_KEY || process.env.AWS_SECRET_KEY;
 const BUCKET_NAME = process.env.VITE_S3_BUCKET || process.env.S3_BUCKET || "allure-report-telephony";
-
+const S3_ENDPOINT = process.env.VITE_S3_ENDPOINT || process.env.S3_ENDPOINT;
 
 if (!AWS_ACCESS_KEY || !AWS_SECRET_KEY) {
-  console.error('Missing AWS credentials!');
-  console.error('Please check your .env file has:');
-  console.error('VITE_AWS_ACCESS_KEY=your-key');
-  console.error('VITE_AWS_SECRET_KEY=your-secret');
-  throw new Error('AWS credentials not configured');
+  throw new Error('Missing R2/S3 credentials. Check VITE_AWS_ACCESS_KEY and VITE_AWS_SECRET_KEY in .env');
 }
 
 const s3Client = new S3Client({
-  region: AWS_REGION,
+  region: "auto",
+  endpoint: S3_ENDPOINT,
   credentials: {
     accessKeyId: AWS_ACCESS_KEY,
     secretAccessKey: AWS_SECRET_KEY,
