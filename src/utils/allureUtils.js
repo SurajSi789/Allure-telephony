@@ -1,7 +1,7 @@
 const API_BASE = "https://allure-telephony.onrender.com";
 
 export const fetchRunResults = async (runId) => {
-  const res = await fetch(`${API_BASE}/api/run/reports/${runId}/results`);
+  const res = await fetch(`${API_BASE}/api/run/reports/${runId}`);
   if (!res.ok) throw new Error(`Failed to fetch results: ${res.status}`);
   return res.json();
 };
