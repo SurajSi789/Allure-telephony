@@ -170,7 +170,7 @@ async function streamToString(stream) {
 
 export { streamToString };
 
-app.get("/api/run/:runId/results", async (req, res) => {
+app.get("/api/run/reports/:runId/results", async (req, res) => {
   try {
     const { runId } = req.params;
 

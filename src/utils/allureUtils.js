@@ -1,13 +1,13 @@
 const API_BASE = "https://allure-telephony.onrender.com";
 
 export const fetchRunResults = async (runId) => {
-  const res = await fetch(`${API_BASE}/api/run/${runId}/results`);
+  const res = await fetch(`${API_BASE}/api/run/reports/${runId}/results`);
   if (!res.ok) throw new Error(`Failed to fetch results: ${res.status}`);
   return res.json();
 };
 
 export const downloadAllTestLogs = async (runId) => {
-  const res = await fetch(`${API_BASE}/api/run/${runId}/logs`);
+  const res = await fetch(`${API_BASE}/api/run/reports/${runId}/logs`);
   if (res.status === 404) {
     throw new Error("No log files found for this test run.");
   }
