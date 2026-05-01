@@ -25,10 +25,10 @@ const AllureViewer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [s3Config, setS3Config] = useState({
-    bucketName: 'allure-report-telephony',
+    bucketName: 'telephony-automation',
     accessKey: import.meta.env.VITE_AWS_ACCESS_KEY,
     secretKey: import.meta.env.VITE_AWS_SECRET_KEY,
-    region: 'eu-north-1'
+    region: 'auto'
   });
   const [filters, setFilters] = useState({
     status: '',
