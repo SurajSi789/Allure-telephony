@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useReports } from '../src/contexts/ReportsContext';
 import {
-  initializeS3Client,
   fetchRunResults,
   downloadAllTestLogs,
   applyFilters,
@@ -13,103 +12,38 @@ import {
 const AllureViewer = () => {
   const { runId } = useParams();
   const navigate = useNavigate();
-  const { reports, getReports, getCacheStatus } = useReports();
+  const { getReports, getCacheStatus } = useReports();
   const [showPopup, setShowPopup] = useState(false);
-  
-  // Debug: Log the runId to see what we're receiving
-  console.log('AllureViewer received runId:', runId);
-  
-  // State management
   const [allTestResults, setAllTestResults] = useState([]);
   const [filteredResults, setFilteredResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [s3Config, setS3Config] = useState({
-    bucketName: 'telephony-automation',
-    accessKey: import.meta.env.VITE_AWS_ACCESS_KEY,
-    secretKey: import.meta.env.VITE_AWS_SECRET_KEY,
-    region: 'auto'
-  });
-  const [filters, setFilters] = useState({
-    status: '',
-    name: ''
-  });
+  const [filters, setFilters] = useState({ status: '', name: '' });
   const [summary, setSummary] = useState({
-    total: 0,
-    passed: 0,
-    failed: 0,
-    broken: 0,
-    skipped: 0
+    total: 0, passed: 0, failed: 0, broken: 0, skipped: 0
   });
 
-  // Load saved credentials on component mount
-  useEffect(() => {
-    const savedAccessKey = localStorage.getItem('aws_access_key');
-    const savedSecretKey = localStorage.getItem('aws_secret_key');
-    
-    if (savedAccessKey || savedSecretKey) {
-      setS3Config(prev => ({
-        ...prev,
-        accessKey: savedAccessKey || '',
-        secretKey: savedSecretKey || ''
-      }));
-    }
-  }, []);
-
-  // Fetch test results using extracted utilities
   const fetchTestResults = useCallback(async () => {
+    if (!runId) return;
     setLoading(true);
     setError(null);
-
     try {
-      console.log('Fetching test results for runId:', runId);
-      
-      if (runId) {
-        // For specific runId, we need to fetch detailed test results from AWS S3
-        if (!s3Config.accessKey || !s3Config.secretKey) {
-          setError('AWS credentials are required for detailed test results');
-          return;
-        }
-
-        console.log('Fetching detailed results for specific run:', runId);
-        const s3Client = await initializeS3Client(s3Config);
-        const results = await fetchRunResults(s3Client, s3Config, runId);
-        console.log(`Found ${results.length} tests for run ${runId}`);
-        
-        setAllTestResults(results);
-        
-        // Calculate summary
-        const newSummary = {
-          total: results.length,
-          passed: results.filter(r => r.status === 'passed').length,
-          failed: results.filter(r => r.status === 'failed').length,
-          broken: results.filter(r => r.status === 'broken').length,
-          skipped: results.filter(r => r.status === 'skipped').length
-        };
-        setSummary(newSummary);
-      } else {
-        // For general view, use cached reports from context (no AWS call needed)
-        console.log('Using cached reports for general view');
-        await getReports(); // This uses cache if available
-        
-        // Set empty test results for general view since we're just showing reports list
-        setAllTestResults([]);
-        setSummary({
-          total: reports.length,
-          passed: 0,
-          failed: 0,
-          broken: 0,
-          skipped: 0
-        });
-      }
-
+      const results = await fetchRunResults(runId);
+      setAllTestResults(results);
+      setSummary({
+        total:   results.length,
+        passed:  results.filter(r => r.status === 'passed').length,
+        failed:  results.filter(r => r.status === 'failed').length,
+        broken:  results.filter(r => r.status === 'broken').length,
+        skipped: results.filter(r => r.status === 'skipped').length,
+      });
     } catch (err) {
       console.error('Error fetching test results:', err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
-  }, [s3Config, runId, getReports, reports.length]);
+  }, [runId]);
 
   // Apply filters using extracted utility
   const handleApplyFilters = useCallback(() => {
@@ -120,40 +54,24 @@ const AllureViewer = () => {
     setFilteredResults(filtered);
   }, [allTestResults, filters]);
 
-  // Handle download logs using extracted utility
   const handleDownloadLogs = async (testResult) => {
     try {
       setShowPopup(true);
       setTimeout(() => setShowPopup(false), 2000);
-      const s3Client = await initializeS3Client(s3Config);
-      await downloadAllTestLogs(s3Client, s3Config, testResult);
+      await downloadAllTestLogs(testResult.runId || runId);
     } catch (error) {
       console.error('Error downloading logs:', error);
       setError(`Failed to download logs: ${error.message}`);
     }
   };
 
-  // Effects
   useEffect(() => {
-    if (runId || (s3Config.accessKey && s3Config.secretKey)) {
-      fetchTestResults();
-    }
-  }, [fetchTestResults, runId, s3Config.accessKey, s3Config.secretKey]);
+    fetchTestResults();
+  }, [fetchTestResults]);
 
   useEffect(() => {
     handleApplyFilters();
   }, [handleApplyFilters]);
-
-  // Event handlers
-  const handleS3ConfigSubmit = (e) => {
-    e.preventDefault();
-    
-    // Save credentials to localStorage
-    localStorage.setItem('aws_access_key', s3Config.accessKey);
-    localStorage.setItem('aws_secret_key', s3Config.secretKey);
-    
-    fetchTestResults();
-  };
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({
@@ -208,67 +126,6 @@ const AllureViewer = () => {
             </div>
           </div>
 
-          {/* S3 Configuration Form - Only show if no runId (manual mode) */}
-          {!runId && (
-            <div className="bg-white bg-opacity-10 rounded-lg p-6 mb-6">
-              <h2 className="text-2xl font-semibold mb-4">🔧 S3 Configuration</h2>
-              <form onSubmit={handleS3ConfigSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Bucket Name</label>
-                    <input
-                      type="text"
-                      value={s3Config.bucketName}
-                      onChange={(e) => setS3Config(prev => ({...prev, bucketName: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
-                      placeholder="your-bucket-name"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Region</label>
-                    <input
-                      type="text"
-                      value={s3Config.region}
-                      onChange={(e) => setS3Config(prev => ({...prev, region: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
-                      placeholder="us-east-1"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Access Key</label>
-                    <input
-                      type="text"
-                      value={s3Config.accessKey}
-                      onChange={(e) => setS3Config(prev => ({...prev, accessKey: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
-                      placeholder="Your AWS Access Key"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Secret Key</label>
-                    <input
-                      type="password"
-                      value={s3Config.secretKey}
-                      onChange={(e) => setS3Config(prev => ({...prev, secretKey: e.target.value}))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-gray-900"
-                      placeholder="Your AWS Secret Key"
-                      required
-                    />
-                  </div>
-                </div>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-white text-blue-600 hover:bg-gray-100 px-6 py-3 rounded-lg font-semibold transition-colors duration-200 disabled:opacity-50"
-                >
-                  {loading ? 'Loading...' : 'Load Test Results'}
-                </button>
-              </form>
-            </div>
-          )}
         </div>
       </div>
 

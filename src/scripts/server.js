@@ -170,6 +170,82 @@ async function streamToString(stream) {
 
 export { streamToString };
 
+app.get("/api/run/:runId/results", async (req, res) => {
+  try {
+    const { runId } = req.params;
+
+    const listResult = await s3Client.send(new ListObjectsV2Command({
+      Bucket: BUCKET_NAME,
+      Prefix: `reports/${runId}/`,
+      MaxKeys: 1000,
+    }));
+
+    const jsonFiles = (listResult.Contents || []).filter(f => f.Key.endsWith('.json'));
+
+    if (jsonFiles.length === 0) {
+      return res.json([]);
+    }
+
+    const results = await Promise.all(jsonFiles.map(async (file) => {
+      try {
+        const s3Res = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: file.Key }));
+        const text = await streamToString(s3Res.Body);
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    }));
+
+    res.json(results.filter(Boolean));
+  } catch (error) {
+    console.error('Error fetching run results:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/run/:runId/logs", async (req, res) => {
+  try {
+    const { runId } = req.params;
+
+    const listResult = await s3Client.send(new ListObjectsV2Command({
+      Bucket: BUCKET_NAME,
+      Prefix: `reports/${runId}/`,
+      MaxKeys: 1000,
+    }));
+
+    const txtFiles = (listResult.Contents || []).filter(f => f.Key.endsWith('.txt'));
+
+    if (txtFiles.length === 0) {
+      return res.status(404).json({ error: 'No log files found for this run' });
+    }
+
+    res.set({
+      'Content-Type': 'application/zip',
+      'Content-Disposition': `attachment; filename="${runId}-logs.zip"`,
+    });
+
+    const archive = archiver('zip', { zlib: { level: 1 }, forceLocalTime: true });
+    archive.on('error', (err) => {
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to create archive' });
+    });
+    archive.pipe(res);
+
+    await Promise.all(txtFiles.map(async (file) => {
+      try {
+        const s3Res = await s3Client.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: file.Key }));
+        archive.append(s3Res.Body, { name: path.basename(file.Key) });
+      } catch (fileError) {
+        console.error(`Error streaming log ${file.Key}:`, fileError);
+      }
+    }));
+
+    await archive.finalize();
+  } catch (error) {
+    console.error('Error fetching run logs:', error);
+    if (!res.headersSent) res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
